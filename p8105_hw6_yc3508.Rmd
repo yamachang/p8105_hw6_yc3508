@@ -1,0 +1,95 @@
+---
+title: "p8105_hw6_yc3508"
+author: "Yama Chang"
+date: "2019/11/24"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(lubridate)
+library(forcats)
+library(modelr)
+library(mgcv)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+set.seed(1)
+```
+
+## Problem 1
+
+1.1 Read and tidy the birthweight data
+
+```{r}
+birthweight = read_csv(file = "./data/birthweight.csv", col_types = NULL, col_names = TRUE) %>%
+  janitor::clean_names() 
+
+
+class(birthweight$wtgain)
+```
+
+```{r}
+birthweight = birthweight %>% 
+  drop_na() %>% 
+  mutate(
+    babysex = as.factor(recode(babysex, `1` = "male", `2` = "female")),
+    frace = as.factor(recode(frace, `1` = "White", `2` = "Black", `3` = "Asian", `4` = "Puerto Rican", `8` = "Other", `9` = "Unknown")),
+    malform = as.factor(recode(malform, `0` = "absent", `1` = "present")),
+    mrace = as.factor(recode(frace, `1` = "White", `2` = "Black", `3` = "Asian", `4` = "Puerto Rican", `8` = "Other"))
+  ) %>% 
+  mutate(
+    frace = relevel(frace, "White"),
+    mrace = relevel(mrace, "White")
+  )
+```
+
+1.2 Build a regression model to predict baby birthweight
+
+According to [Secker-Walker & Vacek, 2003](https://www.ncbi.nlm.nih.gov/pubmed/12507527) and [Catov et al., 2015](https://www.ncbi.nlm.nih.gov/pubmed/26667251), the effect of smoking, gestational age, maternal weight gain during pregnancy are associated to infant birthweight. Also, race disparities are related to birthweight and birth size. Therefore, we propose `smoken`, `wtgain`, `bhead`, `blength`, `mrace`, `gaweeks` as predictors in this regression model, since we hyphothesized that the biological and environmental change (i.e., weight gain, smoking behavior, gestational age) of mother during pregnant and baby's birth size (e.g., baby’s head circumference, baby's length) at birth might influence baby birthweight. Also, we wanted to examine whether the race of mother would show difference of birth weight of babies.
+
+```{r}
+bw = lm(bwt ~ smoken + wtgain + bhead + blength + mrace + gaweeks, data = birthweight)
+
+bw %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  mutate(term = str_replace(term, "^mrace", "mom_race: ")) %>% 
+  knitr::kable(digits = 3)
+```
+
+1.3 model residuals
+
+```{r}
+bw_model = modelr::add_residuals(birthweight, bw)
+bw_model = modelr::add_predictions(bw_model, bw)
+
+bw_model %>% 
+  ggplot(aes(x = pred, y = resid, color = resid)) + 
+  geom_point(alpha = .5) + 
+  theme(legend.position = "right") +
+  labs(
+    x = "Fitted values",
+    y = "Residuals",
+    title = "Regression diagnostics: Residuals against fitted values"
+  )
+```
+

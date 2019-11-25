@@ -214,7 +214,7 @@ boot_sample_2 = weather_df %>%
   select(r.squared)
 ```
 
-__Plot the distribution of log(β̂ 0∗β and r squarê __
+__Plot the distribution of log(β̂ 0∗β̂ 1) and r square__
 
 ```{r}
 plotA = boot_sample %>% 
